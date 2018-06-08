@@ -40,8 +40,12 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ]]--
 
+local DeclaredDependency = require("gear.DeclaredDependency")
+local ProvidedDependency = require("gear.ProvidedDependency")
+
 local Gear = {}
 Gear.__index = Gear
+
 
 function Gear.create()
   return setmetatable({
@@ -78,17 +82,47 @@ function Gear:declare(name, description)
     assert(type(initializer) == 'function', "initializer should be a function")
   end
 
-  -- all seems fine
-  self.components[name] = {
+  local provides = description.provides
+  if (provides) then
+    assert(initializer, "initializer must be defined for " .. name .. ", as it provides some other components")
+    assert(type(provides) == 'table', "provides should be a table")
+  else
+    provides = {}
+  end
+
+  -- all seems fine, create primary "root" component
+  local root = DeclaredDependency.create({
+    name         = name,
+    gear         = self,
     dependencies = dependencies,
     constructor  = constructor,
     initializer  = initializer,
-    instance     = nil,
+    provides     = provides,
+  })
+
+  self.components[name] = {
+    dependency = root,
+    instance   = nil,
   }
+
+  -- create secondary descriptors for provided components
+  for _, component_name in pairs(provides) do
+    self.components[component_name] = {
+      dependency = ProvidedDependency.create({
+        name      = component_name,
+        gear      = self,
+        component = root,
+      }),
+      instance   = nil,
+    }
+  end
+
 end
 
 function Gear:set(name, instance)
   assert(name)
+  -- print("-- set:" .. name .. " => " .. instance)
+
   local decl = self.components[name]
   if (not decl) then
     decl = { }
@@ -99,29 +133,11 @@ end
 
 function Gear:get(name)
   local decl = assert(self.components[name], "No declaration for " .. name)
+
   if (decl.instance) then return decl.instance end
 
-  -- create instance
-  local instance = decl.constructor()
-  assert(instance, "Constructor for " .. name .. " should return something")
-
-  -- record the instance to avoid indirect recursion for chicken/egg
-  decl.instance = instance
-
-  -- possibly instantiate dependencies
-  local dependency_instances = {}
-  for _, dependency in ipairs(decl.dependencies) do
-    local d = self:get(dependency)
-    table.insert(dependency_instances, d)
-  end
-
-  -- initialize instance
-  if (decl.initializer) then
-    decl.initializer(self, instance, table.unpack(dependency_instances))
-  end
-
-  return instance
+  decl.instance = decl.dependency:construct()
+  return decl.instance
 end
 
-Gear.__index = Gear
 return Gear
