@@ -1,16 +1,16 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "gear"
-version = "0.01-1"
+version = "0.02-1"
 -- LuaDist source
 source = {
-  tag = "0.01-1",
+  tag = "0.02-1",
   url = "git://github.com/LuaDist-testing/gear.git"
 }
 -- Original source
 -- source = {
 --    url = "git://github.com/basiliscos/lua-gear",
---    tag = "v0.01-1",
+--    tag = "v0.02-1",
 -- }
 description = {
    summary = "Inversion of Control implementation in lua",

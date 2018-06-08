@@ -49,28 +49,36 @@ function Gear.create()
   }, Gear)
 end
 
-function Gear:declare(...)
-  local args = { ... }
-  assert(#args >= 2 and #args <= 4, "incorrect argruments for Gear:declare")
-  local name = table.remove(args, 1)
+function Gear:declare(name, description)
+  assert(name, "component name is mandatory")
+  assert(type(name) == 'string', "component name must be a string")
   assert(not self.components[name], "Component " .. name .. " is already declared")
-  local constructor
-  local dependencies = table.remove(args, 1)
 
-  if (type(dependencies) ~= 'table') then
-    constructor = dependencies
-    dependencies = {}
-  else
-    constructor = table.remove(args, 1)
+  assert(description, "component description is mandatory")
+  assert(type(description) == 'table', "component description should be a table")
+
+  -- dependencies
+  local dependencies = {}
+  if (description.dependencies) then
+    dependencies = description.dependencies
+  elseif (description.resolver) then
+    local resolver = description.resolver
+    dependencies = resolver(name)
   end
+  assert(dependencies, "dependencies must be a table")
 
+  -- constructor
+  local constructor = description.constructor
+  assert(constructor, "description/constructor is mandatory")
   assert(type(constructor) == 'function', "constructor should be a function")
 
-  local initializer = table.remove(args, 1)
+  -- initializer
+  local initializer = description.initializer
   if (initializer) then
     assert(type(initializer) == 'function', "initializer should be a function")
   end
 
+  -- all seems fine
   self.components[name] = {
     dependencies = dependencies,
     constructor  = constructor,

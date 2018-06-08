@@ -5,16 +5,19 @@ local Gear = require "gear"
 
 local declarator = function()
   local g = Gear.create()
-  g:declare("chicken", {"egg"},
-    function() return { class = "chicken" } end,
-    function(g, instance, egg) instance.egg = egg end
-  )
-  g:declare("egg", {"chicken"},
-    function() return { class = "egg" } end,
-    function(g, instance, chicken) instance.chicken = chicken end
-  )
+  g:declare("chicken", {
+    dependencies = {"egg"},
+    constructor  = function() return { class = "chicken" } end,
+    initializer  = function(g, instance, egg) instance.egg = egg end,
+  })
+  g:declare("egg", {
+    dependencies = {"chicken"},
+    constructor  = function() return { class = "egg" } end,
+    initializer  = function(g, instance, chicken) instance.chicken = chicken end,
+  })
   return g
 end
+
 subtest("via chicken", function()
   local g = declarator()
   local chicken = g:get("chicken")
